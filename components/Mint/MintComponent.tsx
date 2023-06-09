@@ -15,7 +15,9 @@ import axios from "axios";
 import { Alchemy, Network } from "alchemy-sdk";
 import MintModal from "./MintModal";
 import { useAuthedProfile } from "../../context/UserContext";
-
+import contractABI  from  "./contractABI";
+import { contractBytecode } from './contractBytecode';
+import { ethers } from "ethers";
 type Props = {};
 
 const MintComponent = (props: Props) => {
@@ -139,7 +141,7 @@ const MintComponent = (props: Props) => {
     let singleNFTData = {
       name: formValues.title,
       description: formValues.description,
-      collectionContract: collection.collectionAddress,
+      collectionContract: collection?.collectionAddress,
       image: file,
     };
     let collectionData = {
@@ -172,13 +174,30 @@ const MintComponent = (props: Props) => {
         }
       }
       // Deploy contract
+   const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-      // setCollectionAddress();
+   await window.ethereum.request({ method: "eth_requestAccounts" });
+
+   const signer = provider.getSigner();
+   // Deploy the new contract
+   const factory = new ethers.ContractFactory(contractABI , contractBytecode, signer);
+   const contract = await factory.deploy(formValues.title, formValuesCollection.token);
+     
+
+   await contract.deployed();
+   const contractAddress = contract.address;
+
+  
+  //setCollectionAddress(contractAddress);
+console.log()
+   //IPFS
+   setLoading(true);
+   
       // Update user database
       axios
         .post("/api/addCollection", {
           collectionName: formValuesCollection.title,
-          collectionAddress,
+          collectionAddress: contractAddress,
           address,
         })
         .then((res) => {
