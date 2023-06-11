@@ -18,6 +18,7 @@ import { useAuthedProfile } from "../../context/UserContext";
 import contractABI from "../../contracts/collectionContractABI";
 import { contractBytecode } from "../../contracts/collectionContractBytecode";
 import { ethers } from "ethers";
+import { collectionContractAddress } from "../../addresses";
 
 type Props = {};
 
@@ -148,13 +149,27 @@ const MintComponent = (props: Props) => {
           signer
         );
         const contract = await factory.deploy(
-          formValues.title,
+          formValuesCollection.title,
           formValuesCollection.token
         );
         await contract.deployed();
         contractAddress = contract.address;
       } else {
         // Mint NFT Contract
+        const provider = new ethers.providers.Web3Provider(
+          window.ethereum as any
+        );
+        await window?.ethereum?.request({ method: "eth_requestAccounts" });
+        const signer = provider.getSigner();
+        const currentContract = new ethers.Contract(
+          collection?.contractAddress,
+          contractABI,
+          signer
+        );
+        const tx = await currentContract.mintNFT(uploadUrl);
+        await tx.wait();
+    setLoading(false);
+    alert(`IPFS Link: ${uploadUrl}`);
       }
 
       // Update user database
