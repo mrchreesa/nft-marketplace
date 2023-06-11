@@ -18,7 +18,7 @@ import { useAuthedProfile } from "../../context/UserContext";
 import contractABI from "../../contracts/collectionContractABI";
 import { contractBytecode } from "../../contracts/collectionContractBytecode";
 import { ethers } from "ethers";
-import { collectionContractAddress } from "../../addresses";
+
 
 type Props = {};
 
