@@ -39,8 +39,8 @@ const CollectionCard: FunctionComponent<Props> = ({ listing }) => {
               className=" overflow-hidden h-full flex min-h-[370px] max-h-[450px]  xl:max-h-[580px] justify-center items-center mb-3"
             >
               <Image
-                src={listing?.metadata.image}
-                alt={listing?.metadata.name}
+                src={listing?.image}
+                alt={listing?.title}
                 width={400}
                 height={400}
                 className="w-full  object-cover cursor-pointer"
@@ -50,17 +50,17 @@ const CollectionCard: FunctionComponent<Props> = ({ listing }) => {
             <div className="flex flex-col font-ibmPlex mb-16 uppercase text-xs text-[#e4e8eb] ">
               <div className=" flex ">
                 <div className="">
-                  <p>{listing?.metadata.description}</p>
+                  {/* <p>{listing?.description}</p> */}
                 </div>
                 <div className="flex grow"></div>
                 <div className=" flex text-left">
                   {" "}
-                  <p className="pr-[3.25rem] ">
-                    Floor <br /> Price
+                  {/* <p className="pr-[1.25rem]">
+                  Token <br /> symbol
                   </p>
                   <p className="font-bold text-green">
-                    1.1 <br /> ETH
-                  </p>
+                  {listing?.Tokensymbol}
+                  </p> */}
                 </div>
               </div>
 
@@ -73,7 +73,12 @@ const CollectionCard: FunctionComponent<Props> = ({ listing }) => {
                   }}
                   className="font-bold flex cursor-pointer"
                 >
-                  <p>BY @RODRI</p>
+                  <p>BY @
+                  {listing.creator
+                      .slice(0, 3)
+                      .concat("...")
+                      .concat(listing.creator.slice(-4))}
+                  </p>
                   <Image
                     className="ml-3 h-5"
                     src={profile}
@@ -86,10 +91,12 @@ const CollectionCard: FunctionComponent<Props> = ({ listing }) => {
                 <div className="flex grow"></div>
                 <div className=" flex text-left">
                   {" "}
-                  <p className="pr-6 ">
-                    Collection <br /> Count
+                  <p className="pr-[1.25rem]">
+                  Token <br /> symbol
                   </p>
-                  <p className="font-bold ">05</p>
+                  <p className="font-bold text-green">
+                  {listing?.Tokensymbol}
+                  </p>
                 </div>
               </div>
               <div className=" flex mt-3">
@@ -106,7 +113,7 @@ const CollectionCard: FunctionComponent<Props> = ({ listing }) => {
                 <div className="flex grow"></div>
                 <div className=" flex font-bold text-green">
                   {" "}
-                  <p className="pr-5">ENDS IN</p> <p> 10H 22M 09S</p>
+                  {/* <p className="pr-5">ENDS IN</p> <p> 10H 22M 09S</p> */}
                 </div>
                 <div className="flex grow"></div>
 

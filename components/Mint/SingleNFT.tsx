@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
+import { ethers } from "ethers";
+import { ContractAbi, ContractAddress } from "../utils/constants";
+import { fetCollectiontitle } from "../utils/utils";
 
 function classNames(...classes: any[]) {
   return classes.filter(Boolean).join(" ");
@@ -26,9 +29,36 @@ const SingleNFT = ({
   collection,
   setCollection,
 }: Props) => {
-  const handleCollectionChange = (collection: string) => {
-    setCollection(collection);
+  const handleCollectionChange = (collection: string, id: number) => {
+    setCollection({ collection, id });
   };
+  const [menuItems, setMenuItems] = useState<any>(null);
+  // const menuItems = ["Option 1", "Option 2", "Option 3"];
+
+  const fetchCollection = async () => {
+    const provider = new ethers.providers.Web3Provider(
+      (window as CustomWindow).ethereum as any
+    );
+
+    await (window as CustomWindow)?.ethereum?.request({
+      method: "eth_requestAccounts",
+    });
+    const signer = provider.getSigner();
+
+    const contract = new ethers.Contract(ContractAddress, ContractAbi, signer);
+
+    const collectionTx = await contract.fetchMyCollections();
+    console.log(collectionTx);
+    const res = await fetCollectiontitle(collectionTx);
+    console.log(res);
+    setMenuItems(res);
+  };
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetchCollection();
+    }
+  }, []);
+  // console.log(collection);
 
   return (
     <div className="flex flex-col items-center justify-center md:w-3/4 ">
@@ -82,14 +112,13 @@ const SingleNFT = ({
         className="w-full h-16 mt-3 border-green placeholder:text-sm border pl-5 cursor-pointer font-ibmPlex text-green  dark:bg-neutral-800 focus:bg-neutral-700 focus:outline-none transition duration-300 ease-in-out"
       />
 
-      <input
+      <textarea
         id="description1"
         name="description"
         placeholder="Description"
-        type="text"
         value={formValues.description}
         onChange={handleChange}
-        className="w-full h-20 mt-3 border-green placeholder:text-sm border pl-5 cursor-pointer font-ibmPlex text-green  dark:bg-neutral-800  focus:bg-neutral-700 focus:outline-none transition duration-300 ease-in-out"
+        className="w-full h-20 mt-3 border-green placeholder:text-sm border pl-5  pt-2 cursor-pointer font-ibmPlex text-green  dark:bg-neutral-800  focus:bg-neutral-700 focus:outline-none transition duration-300 ease-in-out"
       />
       <div className="font-ibmPlex text-left">
         <p className="my-4 text-[13px]">
@@ -99,7 +128,7 @@ const SingleNFT = ({
           <div>
             <Menu.Button className="inline-flex items-center text-sm mb-3 pl-5 w-full h-14 border-green border cursor-pointer bg-gray-50 dark:hover:bg-neutral-700 dark:bg-neutral-800 hover:bg-gray-100 transition duration-300 ease-in-out ">
               <p className="text-gray-400">
-                {collection ? collection.name : "Collection"}
+                {collection ? collection.collection : "Select a collection"}
               </p>
               <div className="flex-grow"></div>
               <ChevronDownIcon
@@ -108,6 +137,29 @@ const SingleNFT = ({
               />
             </Menu.Button>
           </div>
+          {/* <div>
+            <select
+              className="inline-flex items-center text-sm mb-3 px-5 w-full h-14 border-green border cursor-pointer bg-gray-50 dark:hover:bg-neutral-700 dark:bg-neutral-800 hover:bg-gray-100 transition duration-300 ease-in-out "
+              onChange={handleChange}
+              style={{
+                color: "rgb(156 163 175",
+                outline: "none",
+              }}
+              name="collectionId"
+            >
+              <option value={0}>Select a Collection</option>
+              {menuItems &&
+                menuItems.map((item: any) => (
+                  <option
+                    key={item.id}
+                    value={item.id}
+                    style={{ color: "#32ff91" }}
+                  >
+                    {item.tokensymbol}
+                  </option>
+                ))}
+            </select>
+          </div> */}
 
           <Transition
             as={Fragment}
@@ -120,23 +172,31 @@ const SingleNFT = ({
           >
             <Menu.Items className="absolute right-0 h-auto max-h-36 overflow-y-scroll z-10 w-full origin-top-right  border-green border cursor-pointer dark:bg-neutral-800 ">
               <div className="py-1">
-                {collections?.map((collection: any, i) => (
-                  <Menu.Item key={i}>
-                    {({ active }) => (
-                      <div
-                        onClick={() => handleCollectionChange(collection)}
-                        className={classNames(
-                          active
-                            ? "bg-neutral-700 text-gray-200"
-                            : "text-gray-400",
-                          "block px-4 py-2 text-sm"
-                        )}
-                      >
-                        {collection?.name}
-                      </div>
-                    )}
-                  </Menu.Item>
-                ))}
+                {menuItems?.map(
+                  (collection: any, i: React.Key | null | undefined) => (
+                    <Menu.Item key={i}>
+                      {({ active }) => (
+                        <div
+                          onChange={handleChange}
+                          onClick={() =>
+                            handleCollectionChange(
+                              collection.tokensymbol,
+                              collection.id
+                            )
+                          }
+                          className={classNames(
+                            active
+                              ? "bg-neutral-700 text-gray-200"
+                              : "text-gray-400",
+                            "block px-4 py-2 text-sm"
+                          )}
+                        >
+                          {collection?.tokensymbol}
+                        </div>
+                      )}
+                    </Menu.Item>
+                  )
+                )}
               </div>
             </Menu.Items>
           </Transition>

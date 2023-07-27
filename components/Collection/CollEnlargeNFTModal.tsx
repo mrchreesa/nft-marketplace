@@ -1,5 +1,5 @@
 import React, { FunctionComponent } from "react";
-import Modal from "react-modal";
+import Modal from 'react-modal';
 import Image from "next/image";
 
 type Props = {
@@ -56,8 +56,8 @@ const CollEnlargeNFTModal: FunctionComponent<Props> = ({
                 {listing ? (
                   <div className=" overflow-hidden h-full flex justify-center items-center mb-3">
                     <Image
-                      src={listing?.metadata.image}
-                      alt={listing?.metadata.name}
+                      src={listing?.image}
+                      alt={listing?.name}
                       width={400}
                       height={600}
                       className="w-max h-full min-h-[250px] object-contain"

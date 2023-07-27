@@ -5,8 +5,8 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { useAddress } from "@thirdweb-dev/react";
 import axios from "axios";
+import { ethers } from "ethers";
 import { set } from "mongoose";
 interface CurrentUserContextType {
   username: string;
@@ -24,18 +24,23 @@ export const AuthedProfileProvider = ({ children }: Props) => {
     setAuthedProfile,
     loading,
   };
-  const address = useAddress();
 
-  useEffect(() => {
-    if (address) {
-      axios.post("/api/signIn", { address }).then((res) => {
-        setAuthedProfile(res.data.user);
-      });
-    } else {
-      setLoading(false);
+  const [address, setAddress] = useState<number>(0);
+  const getAdrress = async () => {
+    if (typeof window !== "undefined") {
+      const provider = new ethers.providers.Web3Provider(
+        (window as CustomWindow).ethereum as any
+      );
+      // Request access to the user's Ethereum accounts (MetaMask, etc.)
+      const accounts = await (window as CustomWindow).ethereum.request({ method: 'eth_requestAccounts' });
+
+      // Return the first account address
+      const address = accounts[0];
+      setAddress(address);
     }
-    setLoading(false);
-  }, [address]);
+  }
+
+  useEffect(() => { getAdrress(); }, [])
   return (
     <AuthedProfileContext.Provider value={value}>
       {children}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, FunctionComponent } from "react";
 import Modal from "react-modal";
 import Image from "next/image";
+import { ethers } from "ethers";
+import ButtonSpinner from "../LoadingSkeletons/ButtonSpinner";
 
 type Props = {
   modalOpen: boolean;
@@ -8,6 +10,10 @@ type Props = {
   listing: object | any;
   bidAmount: string;
   setBidAmount: (bidAmount: string) => void;
+  createBidOrOffer: () => void;
+  withBid: () => void;
+  resale: () => void;
+  loadingBid: boolean;
 };
 
 const PlaceBidModal: FunctionComponent<Props> = ({
@@ -16,6 +22,10 @@ const PlaceBidModal: FunctionComponent<Props> = ({
   listing,
   bidAmount,
   setBidAmount,
+  createBidOrOffer,
+  withBid,
+  resale,
+  loadingBid,
 }) => {
   // const [isOpenModal, setIsOpenModal] = useState(true);
   // const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +49,44 @@ const PlaceBidModal: FunctionComponent<Props> = ({
       transform: "translate(-50%, -50%)",
     },
   };
+  // initializing state for balance
+  const [balance, setBalance] = useState<number>(0);
+  const [address, setAddress] = useState<string>("");
+  const [auth, setAuth] = useState<boolean>(false);
+  const getBalance = async () => {
+    if ((window as CustomWindow).ethereum) {
+      const provider = new ethers.providers.Web3Provider(
+        (window as CustomWindow).ethereum as any
+      );
+      // Request access to the user's Ethereum accounts (MetaMask, etc.)
+      const accounts = await (window as CustomWindow).ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      // Return the first account address
+      const address = accounts[0];
+      setAddress(address);
+      if (listing.owner !== undefined) {
+        let listingAdrress = listing.owner;
+        listingAdrress = listingAdrress.toLowerCase();
+        setAuth(listingAdrress === address);
+      }
+      // console.log(mainaddress == "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 ");
+
+      // Get the balance of the specified address
+      const balance = await provider.getBalance(address);
+
+      // Convert the balance to Ether units
+      const bal = ethers.utils.formatEther(balance);
+      const balanceInEther = Math.round(Number(bal));
+
+      setBalance(balanceInEther);
+    }
+  };
+
+  useEffect(() => {
+    getBalance();
+  }, []);
 
   return (
     <div>
@@ -57,8 +105,8 @@ const PlaceBidModal: FunctionComponent<Props> = ({
                 {listing ? (
                   <div className=" overflow-hidden h-full flex justify-center items-center mb-3">
                     <Image
-                      src={listing?.asset.image}
-                      alt={listing?.asset.name}
+                      src={listing?.image}
+                      alt={listing?.title}
                       width={200}
                       height={300}
                       className="w-full max-h-[35vh] min-h-[250px] object-contain"
@@ -74,7 +122,15 @@ const PlaceBidModal: FunctionComponent<Props> = ({
 
                 <div className="flex flex-col w-full font-ibmPlex mb-4 uppercase text-xs text-[#e4e8eb] ">
                   <h1 className="fontCompress tracking-wider font-compressed text-3xl mb-8">
-                    place bid
+                    {listing.timeElapse
+                      ? listing.sold
+                        ? auth
+                          ? "RESALE"
+                          : "ENDED"
+                        : "END NOW"
+                      : listing.endTime != 0
+                      ? listing.endTime
+                      : "place bid"}
                   </h1>
                   <div className=" flex w-full fontIbm">
                     <div className=" flex text-left">
@@ -83,7 +139,7 @@ const PlaceBidModal: FunctionComponent<Props> = ({
                         Reserve <br /> Price
                       </p>
                       <p className="font-bold ">
-                        2.1 <br /> ETH
+                        {listing.price} <br /> ETH
                       </p>
                     </div>
                     <div className="flex grow"></div>
@@ -93,7 +149,7 @@ const PlaceBidModal: FunctionComponent<Props> = ({
                         Current <br /> Bid
                       </p>
                       <p className="font-bold text-green">
-                        2.5 <br /> ETH
+                        {listing.Bid} <br /> ETH
                       </p>
                     </div>
                   </div>
@@ -103,7 +159,7 @@ const PlaceBidModal: FunctionComponent<Props> = ({
                       <div className=" flex text-left">
                         {" "}
                         <p className="pr-6 font-bold text-green">
-                          Offer <br /> Amount
+                          Input <br /> Amount
                         </p>
                         <input
                           type="number"
@@ -121,15 +177,63 @@ const PlaceBidModal: FunctionComponent<Props> = ({
                           Your <br /> Balance
                         </p>
                         <p className="font-bold">
-                          1.1 <br /> ETH
+                          {balance} <br /> ETH
                         </p>
                       </div>
                     </div>
                   </div>
-
-                  <button className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  ">
-                    Make Offer
-                  </button>
+                  {listing.timeElapse ? (
+                    <>
+                      {auth && listing.sold ? (
+                        <button
+                          onClick={resale}
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                        >
+                          RESALE
+                        </button>
+                      ) : listing.sold ? (
+                        <button
+                          onClick={withBid}
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                        >
+                          WITHDRAW
+                        </button>
+                      ) : (
+                        <button
+                          // onClick={endBid}
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                        >
+                          END
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {!listing.isPrimary && (
+                        <button
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                          onClick={withBid}
+                        >
+                          Withdraw Bid
+                        </button>
+                      )}
+                      {loadingBid ? (
+                        <div className="mt-6">
+                          <ButtonSpinner />
+                          <p className="font-ibmPlex text-xs  tracking-normal mt-3">
+                            Processing...
+                          </p>
+                        </div>
+                      ) : (
+                        <button
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                          onClick={createBidOrOffer}
+                        >
+                          Make Bid
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

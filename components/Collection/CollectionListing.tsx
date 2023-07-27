@@ -1,25 +1,14 @@
-import {
-  MediaRenderer,
-  useNetwork,
-  useNetworkMismatch,
-  useListing,
-  useContract,
-  useActiveListings,
-} from "@thirdweb-dev/react";
-import {
-  ChainId,
-  ListingType,
-  Marketplace,
-  NATIVE_TOKENS,
-} from "@thirdweb-dev/sdk";
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { marketplaceContractAddress } from "../../addresses";
 import Router from "next/router";
 import profile from "../../assets/PROFILE.png";
 import Image from "next/image";
 import styles from "../../styles/Home.module.css";
+import { ethers } from "ethers";
+import { ContractAbi, ContractAddress } from "../utils/constants";
+import { fetchListings, fetCollection } from "../utils/utils";
 
 import Link from "next/link";
 import CollectionListingCard from "./CollectionListingCard";
@@ -36,26 +25,80 @@ const CollectionListing = (props: Props) => {
     useState<boolean>(false);
   const [bidAmount, setBidAmount] = useState<string>("");
   // Hooks to detect user is on the right network and switch them if they are not
-  const networkMismatch = useNetworkMismatch();
-  const [, switchNetwork] = useNetwork();
-  const listing = {
-    metadata: {
-      name: "Summer",
-      description: "Summer",
-      image:
-        "https://ipfs-2.thirdwebcdn.com/ipfs/QmUa1iYsovhEPscsx79zWNK9bH7GBH61H2rbhpv9zKeHNC/collection1.png",
-      external_url: "",
-      background_color: "",
-    },
-    assetContractAddress: "0x8a4b29d9921C5Da3C737e63a6B334C4867BfF31E",
-    currencyContractAddress: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-    id: "0",
 
-    sellerAddress: "0x2E1b9630fB5b099625d45d8f7f4B382e49393394",
+  const [listing, setListing] = useState<any>(null);
+  const [listings, setListings] = useState<any>(null);
+  const [bidListing, setBidListing] = useState<any>(null);
 
-    type: 0,
-  };
-  // Modal Place Bid
+  const router = useRouter();
+  const { collectionId } = router.query as { collectionId: string };
+
+  async function createBidOrOffer(listingId: any) {
+    try {
+      // bidAmount // The offer amount the user entered
+      if (typeof window !== "undefined") {
+        const provider = new ethers.providers.Web3Provider(
+          (window as CustomWindow).ethereum as any
+        );
+
+        if (listingId) {
+          await (window as CustomWindow)?.ethereum?.request({
+            method: "eth_requestAccounts",
+          });
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            ContractAddress,
+            ContractAbi,
+            signer
+          );
+          const id = Number(listingId);
+          const valueToSend = ethers.utils.parseEther(bidAmount); // Example: sending 1 Ether
+
+          // Call the contract method with value
+          const listingTx = await contract.bid(id, { value: valueToSend });
+          isModalClosed();
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error);
+    }
+  }
+
+  async function makeOffer(listingId: any) {
+    try {
+      // bidAmount // The offer amount the user entered
+      if (typeof window !== "undefined") {
+        const provider = new ethers.providers.Web3Provider(
+          (window as CustomWindow).ethereum as any
+        );
+
+        if (listingId) {
+          await (window as CustomWindow)?.ethereum?.request({
+            method: "eth_requestAccounts",
+          });
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            ContractAddress,
+            ContractAbi,
+            signer
+          );
+          const id = Number(listingId);
+          const valueToSend = ethers.utils.parseEther(bidAmount); // Example: sending 1 Ether
+
+          // Call the contract method with value
+          const listingTx = await contract.makeOffer(id, {
+            value: valueToSend,
+          });
+          isModalClosed();
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error);
+    }
+  }
+
   const isModalOpen = () => {
     setModalOpen(true);
   };
@@ -71,19 +114,48 @@ const CollectionListing = (props: Props) => {
     setModalOpenEnlargeNFT(false);
   };
 
-  //  if (loadingListing) {
-  //    return (
-  //      <div className={`font-ibmPlex ${styles.loadingOrError}`}>Loading...</div>
-  //    );
-  //  }
+  const fetchlisting = async () => {
+    const provider = new ethers.providers.Web3Provider(
+      (window as CustomWindow).ethereum as any
+    );
 
-  //  if (!listing) {
-  //    return (
-  //      <div className={`font-ibmPlex ${styles.loadingOrError}`}>
-  //        Listing not found
-  //      </div>
-  //    );
-  //  }
+    if (collectionId) {
+      await (window as CustomWindow)?.ethereum?.request({
+        method: "eth_requestAccounts",
+      });
+      const signer = provider.getSigner();
+
+      const contract = new ethers.Contract(
+        ContractAddress,
+        ContractAbi,
+        signer
+      );
+      const id = Number(collectionId);
+      // const listingTx = await contract.fetchNFT(id);
+      // console.log(listingTx)
+      const collectionTx = await contract.fetchCollection(id);
+      const listingTx = await contract.fetchCollectionNFTs(collectionTx.id);
+      console.log(collectionTx, listingTx);
+      const listings = await fetchListings({ contract, listingTx });
+      const collection = await fetCollection(collectionTx);
+      console.log(collection, listings);
+
+      // console.log(collection,listings,listingTx);
+      setListing(collection);
+      setListings(listings);
+      // making a function to get both the collection data and nfts
+
+      //  console.log(res);
+      //  setMenuItems(res);
+    }
+  };
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      fetchlisting();
+    }
+  }, []);
+  console.log(listing);
+
   return (
     <>
       <div className="flex flex-col realtive h-full items-center container lg:w-[98dvw]  mt-[6.5rem]  overflow-x-hidden justify-between">
@@ -99,14 +171,14 @@ const CollectionListing = (props: Props) => {
           <div className="flex flex-col h-full items-center justify-center">
             <div className="flex flex-col h-full items-center justify-center font-ibmPlex">
               <Image
-                src={listing?.metadata.image as string}
-                alt={listing?.metadata.name as string}
+                src={listing?.image as string}
+                alt={listing?.title as string}
                 width={400}
                 height={600}
-                className="w-full max-w-[250px] mt-4 object-contain cursor-pointer rounded-[200px]"
+                className="w-full max-w-[250px] mt-4 object-contain rounded-[200px]"
                 // onClick={isModalOpenEnlargeNFT}
               />{" "}
-              <h1 className="italic mt-2 text-xl">SUMMER</h1>
+              <h1 className="italic mt-2 text-xl">{listing?.title}</h1>
               <div className="flex text-xs mt-2">
                 COLLECTION BY{" "}
                 <div
@@ -117,7 +189,14 @@ const CollectionListing = (props: Props) => {
                   }}
                   className="font-bold pl-2 flex cursor-pointer"
                 >
-                  <p> @RODRI</p>
+                  <p>
+                    {" "}
+                    @
+                    {listing?.creator
+                      ?.slice(0, 3)
+                      .concat("...")
+                      .concat(listing.creator.slice(-4))}
+                  </p>
                   <Image
                     className="ml-3 h-5"
                     src={profile}
@@ -129,33 +208,25 @@ const CollectionListing = (props: Props) => {
               </div>
             </div>
             <div className="font-ibmPlex bold text-center w-full   mt-10 pb-10  leading-5 text-xs">
-              <p className="mx-4 md:mx-0">
-                I painted The Red Man at what I like to think was perhaps the
-                end of an artistic era, and the beginning of a new one--one that
-                I had no idea was even emerging. For years, I had held my idols
-                close to my heart, painting step by step after them. The Red Man
-                was the first time I let go, and held on to myself instead. This
-                was a painting of grace. One that it felt the universe helped me
-                make. I had just turned 20, my life a blur (I had no money), but
-                the day I posted this on Twitter, the painting garnering
-                millions of views and my life changed forever. People ask me a
-                lot, &apos;What inspired the painting?&apos; and I smile and
-                respond, &apos;Life.&apos; This was a distillation of everything
-                I had known and learnt in these years. All my pain, my tears, my
-                laughs and my joys. It&apos;s a painting I&apos;m very proud of.
-              </p>
+              <p className="mx-4 md:mx-0">{listing?.description as string}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 w-full gap-14 sm:mx-8 mb-10">
+              {listings &&
+                listings.map((listing: any, index: number) => (
+                  <CollectionListingCard
+                    isModalOpenEnlargeNFT={isModalOpenEnlargeNFT}
+                    isModalOpen={isModalOpen}
+                    setBidListing={setBidListing}
+                    listing={listing}
+                    key={index}
+                  />
+                ))}
+              {/*             
               <CollectionListingCard
                 isModalOpenEnlargeNFT={isModalOpenEnlargeNFT}
                 isModalOpen={isModalOpen}
                 listing={listing}
-              />
-              <CollectionListingCard
-                isModalOpenEnlargeNFT={isModalOpenEnlargeNFT}
-                isModalOpen={isModalOpen}
-                listing={listing}
-              />
+              /> */}
             </div>
             <div className="flex w-full mt-6 mb-10 font-ibmPlex border-t pt-5 text-xs px-4 pd:mx-0">
               <div className="flex flex-1/2 flex-col w-1/2 items-start">
@@ -193,14 +264,16 @@ const CollectionListing = (props: Props) => {
       <CollPlaceBidModal
         bidAmount={bidAmount}
         setBidAmount={setBidAmount}
-        listing={listing}
+        listing={bidListing}
         isModalClosed={isModalClosed}
         modalOpen={modalOpen}
+        createBidOrOffer={createBidOrOffer}
+        makeOffer={makeOffer}
       />
       <CollEnlargeNFTModal
         isModalClosedEnlargeNFT={isModalClosedEnlargeNFT}
         modalOpenEnlargeNFT={modalOpenEnlargeNFT}
-        listing={listing}
+        listing={bidListing}
       />
     </>
   );

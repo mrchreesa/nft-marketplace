@@ -1,31 +1,31 @@
 import React, { useState, useEffect, FunctionComponent } from "react";
 import Modal from "react-modal";
 import Image from "next/image";
-import {ethers} from "ethers"
+import { ethers } from "ethers";
+import ButtonSpinner from "../LoadingSkeletons/ButtonSpinner";
+
 type Props = {
-  modalOpen: boolean;
-  isModalClosed: () => void;
+  modalEndOpen: boolean;
+  isModalEndClosed: () => void;
   listing: object | any;
-  bidAmount: string;
-  setBidAmount: (bidAmount: string) => void;
-  createBidOrOffer: (listingId: number) => void;
-  makeOffer: (listingId: number) => void;
+
+  endBid: () => void;
+  resale: () => void;
+  loadingBid: boolean;
 };
 
-const CollPlaceBidModal: FunctionComponent<Props> = ({
-  modalOpen,
-  isModalClosed,
+const PlaceBidModal: FunctionComponent<Props> = ({
+  modalEndOpen,
+  isModalEndClosed,
   listing,
-  bidAmount,
-  setBidAmount,
-  createBidOrOffer,
-  makeOffer
+
+  endBid,
+  resale,
+  loadingBid,
 }) => {
   // const [isOpenModal, setIsOpenModal] = useState(true);
   // const [isLoading, setIsLoading] = useState(false);
-  // useEffect(()=>{
-  //   console.log(listing)
-  // },[])
+
   const customStyles = {
     overlay: {
       backgroundColor: "rgb(25, 25, 25, 0.85)",
@@ -45,20 +45,30 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
       transform: "translate(-50%, -50%)",
     },
   };
-
+  // initializing state for balance
   const [balance, setBalance] = useState<number>(0);
-  const [address, setAddress] = useState<number>(0);
+  const [address, setAddress] = useState<string>("");
+  const [auth, setAuth] = useState<boolean>(false);
   const getBalance = async () => {
-    if (typeof window !== "undefined") {
+    if ((window as CustomWindow).ethereum) {
       const provider = new ethers.providers.Web3Provider(
         (window as CustomWindow).ethereum as any
       );
       // Request access to the user's Ethereum accounts (MetaMask, etc.)
-      const accounts = await (window as CustomWindow).ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await (window as CustomWindow).ethereum.request({
+        method: "eth_requestAccounts",
+      });
 
       // Return the first account address
       const address = accounts[0];
       setAddress(address);
+      if (listing.owner !== undefined) {
+        let listingAdrress = listing.owner;
+        listingAdrress = listingAdrress.toLowerCase();
+        setAuth(listingAdrress === address);
+      }
+      // console.log(mainaddress == "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 ");
+
       // Get the balance of the specified address
       const balance = await provider.getBalance(address);
 
@@ -68,17 +78,19 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
 
       setBalance(balanceInEther);
     }
-  }
+  };
 
-  useEffect(() => { getBalance(); }, [])
+  useEffect(() => {
+    getBalance();
+  }, []);
 
   return (
     <div>
       {" "}
       <Modal
         style={customStyles}
-        isOpen={modalOpen}
-        onRequestClose={isModalClosed}
+        isOpen={modalEndOpen}
+        onRequestClose={isModalEndClosed}
         ariaHideApp={false}
       >
         <>
@@ -106,7 +118,7 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
 
                 <div className="flex flex-col w-full font-ibmPlex mb-4 uppercase text-xs text-[#e4e8eb] ">
                   <h1 className="fontCompress tracking-wider font-compressed text-3xl mb-8">
-                    place bid
+                    END NOW
                   </h1>
                   <div className=" flex w-full fontIbm">
                     <div className=" flex text-left">
@@ -115,27 +127,27 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
                         Reserve <br /> Price
                       </p>
                       <p className="font-bold ">
-                        {listing?.price} <br /> ETH
+                        {listing.price} <br /> ETH
                       </p>
                     </div>
                     <div className="flex grow"></div>
                     <div className=" flex text-left ">
                       {" "}
                       <p className="pr-6 ">
-                        Current <br /> Bid
+                        Winning <br /> Bid
                       </p>
                       <p className="font-bold text-green">
-                        {listing?.Bid} <br /> ETH
+                        {listing.Bid} <br /> ETH
                       </p>
                     </div>
                   </div>
 
-                  <div className=" flex mt-3">
+                  {/* <div className=" flex mt-3">
                     <div className=" flex w-full fontIbm">
                       <div className=" flex text-left">
                         {" "}
                         <p className="pr-6 font-bold text-green">
-                          Offer <br /> Amount
+                          Input <br /> Amount
                         </p>
                         <input
                           type="number"
@@ -153,48 +165,30 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
                           Your <br /> Balance
                         </p>
                         <p className="font-bold">
-                          1.1 <br /> ETH
+                          {balance} <br /> ETH
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                {
-                    listing.timeElapse && listing.endTime > 0 ?
-                      <>
-                        {listing.owner == address ?
-                          <button className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  ">
-                            RESALE
-                          </button>
-                          :
-                          listing.sold ?
-                            <button className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  ">
-                              WITHDRAW
-                            </button>
-                            :
-                            <button className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  ">
-                              END
-                            </button>
-                        }
-                      </>
-                      :
-                      <>
-                        <button className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
-                         onClick={()=>{
-                          createBidOrOffer(listing.id)
-                        }}
-                        >
-                          Make Bid
-                        </button>
+                  </div> */}
+                  {listing.timeElapse ? (
+                    <>
+                      {loadingBid ? (
+                        <div className="mt-6">
+                          <ButtonSpinner />
+                          <p className="font-ibmPlex text-xs  tracking-normal mt-3">
+                            Processing...
+                          </p>
+                        </div>
+                      ) : (
                         <button
-                          onClick={()=>{
-                            makeOffer(listing.id)
-                          }}
-                        className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  ">
-                          Make Offer
+                          onClick={endBid}
+                          className="fontCompress text-green mt-6 border border-green font-xxCompressed w-[100%] uppercase tracking-[8px] py-1 bg-white bg-opacity-20 hover:bg-opacity-30 font-semibold text-xl  "
+                        >
+                          END
                         </button>
-                      </>
-                  }
+                      )}
+                    </>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -205,4 +199,4 @@ const CollPlaceBidModal: FunctionComponent<Props> = ({
   );
 };
 
-export default CollPlaceBidModal;
+export default PlaceBidModal;

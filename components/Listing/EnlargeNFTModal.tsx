@@ -56,8 +56,8 @@ const EnlargeNFTModal: FunctionComponent<Props> = ({
                 {listing ? (
                   <div className=" overflow-hidden h-full flex justify-center items-center mb-3">
                     <Image
-                      src={listing?.asset.image}
-                      alt={listing?.asset.name}
+                      src={listing?.image}
+                      alt={listing?.title}
                       width={400}
                       height={600}
                       className="w-max h-full min-h-[250px] object-contain"

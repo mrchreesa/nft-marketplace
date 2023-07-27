@@ -6,6 +6,7 @@ import ProfileMenu from "./ProfileMenu";
 import { usePathname } from "next/navigation";
 import DropDownMenu from "./DropDownMenu";
 
+
 const navigation = [
   { name: "Marketplace", href: "/", current: true },
   { name: "Apply to join", href: "/apply", current: false },
@@ -18,6 +19,8 @@ function classNames(...classes: string[]) {
 
 export default function Header() {
   const [openMenu, setOpen] = useState<boolean>(false);
+
+
 
   const isOpen = () => {
     setOpen(true);

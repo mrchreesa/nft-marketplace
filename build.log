@@ -1,0 +1,13 @@
+
+> build
+> next build
+
+info  - Loaded env from /home/nuel/nft-marketplace/.env.local
+info  - Loaded env from /home/nuel/nft-marketplace/.env
+info  - Skipping linting
+info  - Checking validity of types...
+info  - Creating an optimized production build...
+thread '<unnamed>' panicked at 'byte index 4 is out of bounds of `0x1`', /usr/local/cargo/registry/src/index.crates.io-6f17d22bba15001f/swc_ecma_utils-0.107.9/src/lib.rs:1591:22
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+fatal runtime error: failed to initiate panic, error 5
+Aborted (core dumped)

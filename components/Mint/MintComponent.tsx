@@ -1,24 +1,17 @@
 import React, { use, useEffect, useState } from "react";
 import ButtonSpinner from "../LoadingSkeletons/ButtonSpinner";
-import { ThirdwebStorage } from "@thirdweb-dev/storage";
-import {
-  useStorageUpload,
-  useNFTBalance,
-  useContract,
-  useTotalCount,
-  useAddress,
-  useOwnedNFTs,
-} from "@thirdweb-dev/react";
 import SingleNFT from "./SingleNFT";
 import Collection from "./Collection";
 import axios from "axios";
-import { Alchemy, Network } from "alchemy-sdk";
 import MintModal from "./MintModal";
 import { useAuthedProfile } from "../../context/UserContext";
 import contractABI from "../../contracts/collectionContractABI";
 import { contractBytecode } from "../../contracts/collectionContractBytecode";
 import { ethers } from "ethers";
 import router from "next/router";
+import { submitToIpfs } from "../utils/utils";
+import { ContractAbi, ContractAddress } from "../utils/constants";
+import Web3 from "web3";
 
 type Props = {
   user: any;
@@ -38,12 +31,13 @@ const MintComponent = ({ user }: Props) => {
   const initialMintValues = {
     title: "",
     description: "",
+    collectionId: 0,
     reservePrice: "",
   };
   const initialCollectionValues = {
     title: "",
     description: "",
-    token: "",
+    tokensymbol: "",
   };
 
   const [formValues, setFormValues] = useState(initialMintValues);
@@ -51,16 +45,8 @@ const MintComponent = ({ user }: Props) => {
     initialCollectionValues
   );
 
-  const address = useAddress();
-  // Change the testnet to mainnet when ready
-  // const baseURL = `https://eth-goerli.g.alchemy.com/v2/ORQVzR0fGO4AXjBvx-DUPmKFGWvkgiya/getNFTs`;
-
-  const storage = new ThirdwebStorage();
-  // const { mutateAsync: upload } = useStorageUpload();
-
   const handleChange = (e: any) => {
     const { value, name } = e.target;
-
     setFormValues({ ...formValues, [name]: value });
   };
 
@@ -81,6 +67,7 @@ const MintComponent = ({ user }: Props) => {
   };
   const handleImageChangeCollection = (e: any) => {
     const file = e.target.files[0];
+
     if (file) {
       const url = URL.createObjectURL(file);
 
@@ -107,107 +94,101 @@ const MintComponent = ({ user }: Props) => {
     let singleNFTData = {
       name: formValues.title,
       description: formValues.description,
-      collectionContract: collection?.contractAddress,
+      collectionId: collection?.id >= 0 ? collection.id : 0,
       image: file,
     };
     let collectionData = {
       collectionName: formValuesCollection.title,
       description: formValuesCollection.description,
-      token: formValuesCollection.token,
+      tokensymbol: formValuesCollection.tokensymbol,
+      image: file,
     };
     let collectionImage = {
       file,
     };
-    //Upload to IPFS
+    console.log(singleNFTData);
 
-    if (!isCollection) {
-      // Upload single NFT IPFS
-      try {
-        (uploadUrl = await storage.upload(singleNFTData)),
-          (resolvedUrl = await storage.resolveScheme(uploadUrl));
-      } catch (e) {
-        console.log(e);
-        alert("Something went wrong, please try again later.");
-      }
-    } else {
-      // Upload collection IPFS
-      try {
-        (uploadUrl = await storage.upload(collectionData)),
-          (resolvedUrl = await storage.resolveScheme(uploadUrl)),
-          (imageUploadUrl = await storage.upload(collectionImage));
-      } catch (e) {
-        console.log(e);
-        alert("Something went wrong, please try again later.");
-      }
-    }
     // Deploy contract
     if (isCollection) {
+      const tokenUrl = await submitToIpfs(collectionData);
       const provider = new ethers.providers.Web3Provider(
-        window.ethereum as any
+        (window as CustomWindow).ethereum as any
       );
 
-      await window?.ethereum?.request({ method: "eth_requestAccounts" });
+      await (window as CustomWindow)?.ethereum?.request({
+        method: "eth_requestAccounts",
+      });
       const signer = provider.getSigner();
+
+      const address = await signer.getAddress();
 
       try {
         setLoadingToDeploy(true);
-        // Deploy the new contract
-        const factory = new ethers.ContractFactory(
-          contractABI,
-          contractBytecode,
+        // Initialize the contract with the signer
+        const contract = new ethers.Contract(
+          ContractAddress,
+          ContractAbi,
           signer
         );
-        const contract = await factory.deploy(
-          formValues.title,
-          formValuesCollection.token
-        );
+
         setLoading(false);
-        await contract.deployed();
-        contractAddress = contract.address;
+        // console.log(tokenUrl, collectionData.tokensymbol);
+
+        const collectionCreatedTx = await contract.createCollection(
+          tokenUrl,
+          collectionData.tokensymbol
+        );
+
+        const collectionCreated = await collectionCreatedTx.wait();
+        // console.log(collectionCreated);
+
         // Update user database
-        axios
-          .post("/api/addCollection", {
-            collectionName: formValuesCollection.title,
-            contractAddress,
-            collectionLogo: imageUploadUrl,
-            address,
-          })
-          .then((res) => {
-            console.log(res.data);
-            setAuthedProfile(res.data);
-            refreshData();
-            isModalOpen();
-          })
-          .catch((err) => {
-            console.log(err);
-          })
-          .finally(() => {
-            setLoadingToDeploy(false);
-          });
+        setLoadingToDeploy(false);
       } catch (e) {
         console.log(e);
         alert("Something went wrong, please try again later.");
       }
     } else {
       // Mint NFT Contract
+      const tokenUrl = await submitToIpfs(singleNFTData);
       const provider = new ethers.providers.Web3Provider(
-        window.ethereum as any
+        (window as CustomWindow).ethereum as any
       );
-      await window?.ethereum?.request({ method: "eth_requestAccounts" });
+
+      await (window as CustomWindow)?.ethereum?.request({
+        method: "eth_requestAccounts",
+      });
       const signer = provider.getSigner();
+
+      const address = await signer.getAddress();
       try {
-        const currentContract = new ethers.Contract(
-          collection?.contractAddress,
-          contractABI,
+        setLoadingToDeploy(true);
+        // console.log(tokenUrl);
+
+        // Initialize the contract with the signer
+        const contract = new ethers.Contract(
+          ContractAddress,
+          ContractAbi,
           signer
         );
 
-        const tx = await currentContract.mintNFT(uploadUrl);
-        setLoadingToDeploy(true);
         setLoading(false);
-        await tx.wait();
+        // console.log(singleNFTData.name, tokenUrl, formValues.reservePrice);
+
+        // await contract.approveArtist(address);
+        const approveTx = await contract.createListing(
+          singleNFTData.collectionId,
+          tokenUrl,
+          Web3.utils.toWei(formValues.reservePrice, "ether")
+        );
+        // Wait for the transaction to be mined
+        await approveTx.wait();
+
+        // setLoading(false);
         isModalOpen();
       } catch (e) {
+        console.log(e);
+
         alert("Something went wrong, please try again later.");
       }
     }
@@ -228,6 +209,7 @@ const MintComponent = ({ user }: Props) => {
   const isModalClosed = () => {
     setModalOpen(false);
   };
+  console.log(formValues);
 
   return (
     <>

@@ -61,7 +61,7 @@ const Banner = ({
       cropperOpen: true,
     });
   };
-  console.log(authedProfile.bannerPicture);
+  // console.log(authedProfile.bannerPicture);
 
   return (
     <>
